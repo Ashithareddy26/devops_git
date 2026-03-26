@@ -1,1 +1,1399 @@
-<h1>This is a website</h1>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocVault — Your Personal Document Safe</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3a;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --gold-dim: rgba(201,168,76,0.15);
+    --text: #e8e8f0;
+    --text-muted: #7a7a9a;
+    --red: #e05252;
+    --green: #52c87a;
+    --blue: #5299e0;
+    --purple: #9b6ee0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* LOCK SCREEN */
+  #lockScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    flex-direction: column;
+    gap: 2rem;
+    animation: fadeInUp 0.8s ease;
+  }
+
+  .lock-glow {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .lock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3rem;
+    width: 380px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,168,76,0.1);
+  }
+
+  .lock-icon {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2rem;
+    box-shadow: 0 8px 32px rgba(201,168,76,0.3);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 32px rgba(201,168,76,0.3); }
+    50% { box-shadow: 0 8px 48px rgba(201,168,76,0.5); }
+  }
+
+  .lock-card h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: var(--gold);
+    margin-bottom: 0.4rem;
+  }
+
+  .lock-card p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+  }
+
+  .lock-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 0.3em;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
+  }
+
+  .lock-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+  }
+
+  .lock-btn {
+    width: 100%;
+    padding: 0.9rem;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: #1a1200;
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .lock-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(201,168,76,0.3); }
+  .lock-btn:active { transform: translateY(0); }
+
+  .lock-hint {
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .shake { animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+
+  /* MAIN APP */
+  #app { display: none; animation: fadeInUp 0.6s ease; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(13,13,20,0.8);
+    backdrop-filter: blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+
+  .logo-text span {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    display: block;
+    margin-top: -2px;
+    font-style: normal;
+    letter-spacing: 0.05em;
+  }
+
+  .header-actions { display: flex; gap: 0.75rem; align-items: center; }
+
+  .btn {
+    padding: 0.55rem 1.1rem;
+    border-radius: 8px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: #1a1200;
+    font-weight: 600;
+  }
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,168,76,0.3); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 65px);
+  }
+
+  /* SIDEBAR */
+  sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    background: var(--surface);
+  }
+
+  .sidebar-section { margin-bottom: 2rem; }
+
+  .sidebar-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    padding: 0 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    transition: all 0.15s;
+    margin-bottom: 0.1rem;
+  }
+
+  .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+  .sidebar-item.active { background: var(--gold-dim); color: var(--gold); }
+
+  .sidebar-item .count {
+    margin-left: auto;
+    background: var(--surface2);
+    border-radius: 20px;
+    padding: 1px 8px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .sidebar-item.active .count {
+    background: rgba(201,168,76,0.2);
+    color: var(--gold);
+  }
+
+  /* STORAGE BAR */
+  .storage-widget {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: auto;
+  }
+
+  .storage-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .storage-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .storage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    border-radius: 2px;
+    width: 34%;
+    transition: width 0.5s ease;
+  }
+
+  /* MAIN CONTENT */
+  main { padding: 2rem; overflow-y: auto; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    transition: all 0.2s;
+  }
+
+  .stat-card:hover { border-color: rgba(201,168,76,0.3); transform: translateY(-2px); }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+
+  .stat-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    color: var(--text);
+  }
+
+  /* CATEGORY GRID */
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .cat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .cat-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.1); }
+  .cat-card:hover::before { opacity: 1; }
+
+  .cat-card[data-color="gold"]::before { background: linear-gradient(90deg, var(--gold), var(--gold-light)); }
+  .cat-card[data-color="blue"]::before { background: linear-gradient(90deg, #4a8fd4, #85bef5); }
+  .cat-card[data-color="green"]::before { background: linear-gradient(90deg, #3db86e, #7de8a8); }
+  .cat-card[data-color="red"]::before { background: linear-gradient(90deg, #d44a4a, #f58585); }
+  .cat-card[data-color="purple"]::before { background: linear-gradient(90deg, #8a4fd4, #c585f5); }
+  .cat-card[data-color="teal"]::before { background: linear-gradient(90deg, #3db8b8, #7de8e8); }
+
+  .cat-icon { font-size: 1.8rem; margin-bottom: 0.8rem; }
+  .cat-name { font-size: 0.9rem; font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+  .cat-count { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* DOCUMENT LIST */
+  .doc-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .doc-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .doc-item:hover { border-color: rgba(201,168,76,0.3); background: var(--surface2); }
+
+  .doc-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .doc-info { flex: 1; min-width: 0; }
+  .doc-name { font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+  .doc-badges { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; }
+
+  .badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+
+  .badge-locked { background: rgba(201,168,76,0.15); color: var(--gold); }
+  .badge-exp { background: rgba(224,82,82,0.15); color: var(--red); }
+  .badge-ok { background: rgba(82,200,122,0.15); color: var(--green); }
+
+  .doc-actions { display: flex; gap: 0.4rem; }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+
+  .icon-btn:hover { background: var(--surface2); color: var(--text); }
+  .icon-btn.danger:hover { background: rgba(224,82,82,0.1); color: var(--red); }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    margin-bottom: 2rem;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+  }
+
+  .upload-zone-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .upload-zone h3 { font-family: 'Playfair Display', serif; color: var(--text); margin-bottom: 0.5rem; }
+  .upload-zone p { color: var(--text-muted); font-size: 0.85rem; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    width: 480px;
+    max-width: 95vw;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    transform: scale(0.95);
+    transition: transform 0.2s;
+  }
+
+  .modal-overlay.open .modal { transform: scale(1); }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .form-group { margin-bottom: 1rem; }
+
+  .form-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .form-input, .form-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  .form-input:focus, .form-select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+  }
+
+  .form-select option { background: var(--surface2); }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  .password-toggle {
+    position: relative;
+  }
+
+  .password-toggle input { padding-right: 2.5rem; }
+  .password-toggle .eye-btn {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  /* SEARCH BAR */
+  .search-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    width: 280px;
+    transition: all 0.2s;
+  }
+
+  .search-bar:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.1); }
+  .search-bar::placeholder { color: var(--text-muted); }
+
+  /* EXPIRY WARNING */
+  .expiry-banner {
+    background: linear-gradient(135deg, rgba(224,82,82,0.15), rgba(224,82,82,0.05));
+    border: 1px solid rgba(224,82,82,0.3);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  .expiry-banner .icon { font-size: 1.2rem; }
+  .expiry-banner strong { color: var(--red); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+
+  .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+  .empty-state h3 { font-family: 'Playfair Display', serif; color: var(--text-muted); margin-bottom: 0.5rem; }
+
+  /* FILE TYPE COLORS */
+  .ft-pdf { background: rgba(224,82,82,0.15); color: var(--red); }
+  .ft-img { background: rgba(82,153,224,0.15); color: var(--blue); }
+  .ft-doc { background: rgba(82,200,122,0.15); color: var(--green); }
+  .ft-other { background: rgba(155,110,224,0.15); color: var(--purple); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1.3rem;
+    font-size: 0.85rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    z-index: 9000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(82,200,122,0.4); }
+  .toast.error { border-color: rgba(224,82,82,0.4); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    sidebar { display: none; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .category-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-glow"></div>
+  <div class="lock-card">
+    <div class="lock-icon">🔐</div>
+    <h1>DocVault</h1>
+    <p>Your personal document safe. Enter your PIN to access.</p>
+    <input type="password" class="lock-input" id="pinInput" maxlength="6" placeholder="• • • • • •" autocomplete="off">
+    <button class="lock-btn" onclick="unlock()">Unlock Vault</button>
+    <p class="lock-hint">Default PIN: <strong style="color:var(--gold)">123456</strong> &nbsp;·&nbsp; Change in Settings</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔐</div>
+      <div class="logo-text">DocVault <span>Personal Document Safe</span></div>
+    </div>
+    <div style="display:flex;gap:1rem;align-items:center;">
+      <input type="text" class="search-bar" placeholder="🔍  Search documents..." id="searchInput" oninput="searchDocs()">
+      <div class="header-actions">
+        <button class="btn btn-ghost" onclick="showPage('settings')">⚙️ Settings</button>
+        <button class="btn btn-gold" onclick="openUploadModal()">＋ Add Document</button>
+        <button class="btn btn-ghost" onclick="lockApp()" title="Lock Vault">🔒</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <sidebar>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Navigation</div>
+        <div class="sidebar-item active" onclick="showPage('dashboard', this)">🏠 Dashboard <span class="count" id="totalCount">0</span></div>
+        <div class="sidebar-item" onclick="showPage('all', this)">📁 All Documents <span class="count" id="allCount">0</span></div>
+        <div class="sidebar-item" onclick="showPage('expiring', this)">⚠️ Expiring Soon <span class="count" id="expiringCount">0</span></div>
+        <div class="sidebar-item" onclick="showPage('locked', this)">🔒 Password Protected <span class="count" id="lockedCount">0</span></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Categories</div>
+        <div class="sidebar-item" onclick="filterByCategory('identity', this)">🪪 Identity <span class="count" id="cnt-identity">0</span></div>
+        <div class="sidebar-item" onclick="filterByCategory('financial', this)">💳 Financial <span class="count" id="cnt-financial">0</span></div>
+        <div class="sidebar-item" onclick="filterByCategory('medical', this)">🏥 Medical <span class="count" id="cnt-medical">0</span></div>
+        <div class="sidebar-item" onclick="filterByCategory('education', this)">🎓 Education <span class="count" id="cnt-education">0</span></div>
+        <div class="sidebar-item" onclick="filterByCategory('property', this)">🏠 Property <span class="count" id="cnt-property">0</span></div>
+        <div class="sidebar-item" onclick="filterByCategory('travel', this)">✈️ Travel <span class="count" id="cnt-travel">0</span></div>
+        <div class="sidebar-item" onclick="filterByCategory('other', this)">📋 Other <span class="count" id="cnt-other">0</span></div>
+      </div>
+
+      <div class="storage-widget">
+        <div class="storage-label">
+          <span>Storage Used</span>
+          <span id="storageText">0 KB / 5 MB</span>
+        </div>
+        <div class="storage-bar"><div class="storage-fill" id="storageFill"></div></div>
+      </div>
+    </sidebar>
+
+    <main>
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Docs</div>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-sub">in your vault</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Protected</div>
+            <div class="stat-value" id="stat-locked" style="color:var(--gold)">0</div>
+            <div class="stat-sub">password locked</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Expiring</div>
+            <div class="stat-value" id="stat-expiring" style="color:var(--red)">0</div>
+            <div class="stat-sub">within 90 days</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Categories</div>
+            <div class="stat-value" id="stat-cats" style="color:var(--blue)">7</div>
+            <div class="stat-sub">organized types</div>
+          </div>
+        </div>
+
+        <div id="expiryBanner" style="display:none" class="expiry-banner">
+          <span class="icon">⚠️</span>
+          <div><strong>Attention:</strong> <span id="expiryBannerText"></span> document(s) are expiring within 90 days. <a href="#" onclick="showPage('expiring')" style="color:var(--gold)">View them →</a></div>
+        </div>
+
+        <div class="section-header">
+          <h2 class="section-title">Document Categories</h2>
+        </div>
+
+        <div class="category-grid">
+          <div class="cat-card" data-color="blue" onclick="filterByCategory('identity')">
+            <div class="cat-icon">🪪</div>
+            <div class="cat-name">Identity</div>
+            <div class="cat-count" id="cat-identity">0 documents</div>
+          </div>
+          <div class="cat-card" data-color="gold" onclick="filterByCategory('financial')">
+            <div class="cat-icon">💳</div>
+            <div class="cat-name">Financial</div>
+            <div class="cat-count" id="cat-financial">0 documents</div>
+          </div>
+          <div class="cat-card" data-color="green" onclick="filterByCategory('medical')">
+            <div class="cat-icon">🏥</div>
+            <div class="cat-name">Medical</div>
+            <div class="cat-count" id="cat-medical">0 documents</div>
+          </div>
+          <div class="cat-card" data-color="purple" onclick="filterByCategory('education')">
+            <div class="cat-icon">🎓</div>
+            <div class="cat-name">Education</div>
+            <div class="cat-count" id="cat-education">0 documents</div>
+          </div>
+          <div class="cat-card" data-color="teal" onclick="filterByCategory('property')">
+            <div class="cat-icon">🏠</div>
+            <div class="cat-name">Property</div>
+            <div class="cat-count" id="cat-property">0 documents</div>
+          </div>
+          <div class="cat-card" data-color="red" onclick="filterByCategory('travel')">
+            <div class="cat-icon">✈️</div>
+            <div class="cat-name">Travel</div>
+            <div class="cat-count" id="cat-travel">0 documents</div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <h2 class="section-title">Recent Documents</h2>
+          <button class="btn btn-ghost" onclick="showPage('all')">View All →</button>
+        </div>
+        <div class="doc-list" id="recentDocs"></div>
+        <div id="emptyDashboard" class="empty-state" style="display:none">
+          <div class="icon">📂</div>
+          <h3>Your vault is empty</h3>
+          <p>Click "Add Document" to store your first document securely.</p>
+        </div>
+      </div>
+
+      <!-- ALL DOCUMENTS -->
+      <div class="page" id="page-all">
+        <div class="section-header">
+          <h2 class="section-title">All Documents</h2>
+          <button class="btn btn-gold" onclick="openUploadModal()">＋ Add Document</button>
+        </div>
+        <div class="doc-list" id="allDocs"></div>
+        <div id="emptyAll" class="empty-state" style="display:none">
+          <div class="icon">📂</div>
+          <h3>No documents yet</h3>
+          <p>Add your first important document to get started.</p>
+        </div>
+      </div>
+
+      <!-- EXPIRING -->
+      <div class="page" id="page-expiring">
+        <div class="section-header">
+          <h2 class="section-title">⚠️ Expiring Documents</h2>
+        </div>
+        <div class="doc-list" id="expiringDocs"></div>
+        <div id="emptyExpiring" class="empty-state" style="display:none">
+          <div class="icon">✅</div>
+          <h3>All good!</h3>
+          <p>No documents expiring within the next 90 days.</p>
+        </div>
+      </div>
+
+      <!-- LOCKED -->
+      <div class="page" id="page-locked">
+        <div class="section-header">
+          <h2 class="section-title">🔒 Password Protected</h2>
+        </div>
+        <div class="doc-list" id="lockedDocs"></div>
+        <div id="emptyLocked" class="empty-state" style="display:none">
+          <div class="icon">🔓</div>
+          <h3>No locked documents</h3>
+          <p>You can protect sensitive documents with individual passwords.</p>
+        </div>
+      </div>
+
+      <!-- CATEGORY PAGE -->
+      <div class="page" id="page-category">
+        <div class="section-header">
+          <h2 class="section-title" id="categoryPageTitle">Category</h2>
+          <button class="btn btn-gold" onclick="openUploadModal()">＋ Add Document</button>
+        </div>
+        <div class="doc-list" id="categoryDocs"></div>
+        <div id="emptyCategory" class="empty-state" style="display:none">
+          <div class="icon">📁</div>
+          <h3>No documents here</h3>
+          <p>No documents in this category yet.</p>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <h2 class="section-title" style="margin-bottom:1.5rem">⚙️ Settings</h2>
+        <div style="max-width:480px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1rem;">
+            <h3 style="font-family:'Playfair Display',serif;margin-bottom:1rem;color:var(--gold)">🔐 Change Vault PIN</h3>
+            <div class="form-group">
+              <label class="form-label">Current PIN</label>
+              <input type="password" class="form-input" id="currentPin" placeholder="Enter current PIN" maxlength="6">
+            </div>
+            <div class="form-group">
+              <label class="form-label">New PIN</label>
+              <input type="password" class="form-input" id="newPin" placeholder="Enter new PIN" maxlength="6">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New PIN</label>
+              <input type="password" class="form-input" id="confirmPin" placeholder="Confirm new PIN" maxlength="6">
+            </div>
+            <button class="btn btn-gold" onclick="changePin()">Update PIN</button>
+          </div>
+
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;">
+            <h3 style="font-family:'Playfair Display',serif;margin-bottom:1rem;color:var(--red)">⚠️ Danger Zone</h3>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">This will delete ALL documents from your vault. This cannot be undone.</p>
+            <button class="btn" style="background:rgba(224,82,82,0.1);color:var(--red);border:1px solid rgba(224,82,82,0.3);" onclick="clearAll()">🗑️ Clear All Documents</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <div class="modal-title">📎 Add Document</div>
+
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+      <div class="upload-zone-icon" id="dropIcon">📂</div>
+      <h3 id="dropTitle">Drop your file here</h3>
+      <p id="dropSub">or click to browse · PDF, JPG, PNG, DOCX supported</p>
+      <input type="file" id="fileInput" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.docx,.doc,.xlsx,.txt" onchange="fileSelected(event)">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Document Name *</label>
+        <input type="text" class="form-input" id="docName" placeholder="e.g. Passport">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="docCategory">
+          <option value="identity">🪪 Identity</option>
+          <option value="financial">💳 Financial</option>
+          <option value="medical">🏥 Medical</option>
+          <option value="education">🎓 Education</option>
+          <option value="property">🏠 Property</option>
+          <option value="travel">✈️ Travel</option>
+          <option value="other">📋 Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Issue Date</label>
+        <input type="date" class="form-input" id="docIssue">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Expiry Date</label>
+        <input type="date" class="form-input" id="docExpiry">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <input type="text" class="form-input" id="docNotes" placeholder="Optional notes...">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">🔒 Document Password (optional)</label>
+      <div class="password-toggle">
+        <input type="password" class="form-input" id="docPassword" placeholder="Leave blank for no password protection">
+        <button class="eye-btn" onclick="toggleDocPass()">👁</button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveDocument()">💾 Save to Vault</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <div class="modal-title" id="viewModalTitle">📄 Document</div>
+    <div id="viewModalContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('viewModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASS PROMPT MODAL -->
+<div class="modal-overlay" id="passModal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">🔒 Protected Document</div>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">This document is password protected. Enter the password to view it.</p>
+    <div class="form-group">
+      <div class="password-toggle">
+        <input type="password" class="form-input" id="docPassInput" placeholder="Enter document password">
+        <button class="eye-btn" onclick="togglePass('docPassInput')">👁</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('passModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="checkDocPass()">Unlock 🔓</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// STATE
+let vault = JSON.parse(localStorage.getItem('docvault_docs') || '[]');
+let vaultPin = localStorage.getItem('docvault_pin') || '123456';
+let selectedFile = null;
+let pendingDocId = null;
+let currentCategory = '';
+
+// ─── LOCK ──────────────────────────────────────────────
+function unlock() {
+  const pin = document.getElementById('pinInput').value;
+  if (pin === vaultPin) {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    refreshAll();
+  } else {
+    const card = document.querySelector('.lock-card');
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 400);
+    document.getElementById('pinInput').value = '';
+    showToast('❌ Incorrect PIN', 'error');
+  }
+}
+
+document.getElementById('pinInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') unlock();
+});
+
+function lockApp() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('pinInput').value = '';
+}
+
+// ─── NAVIGATION ────────────────────────────────────────
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  renderPage(name);
+}
+
+function renderPage(name) {
+  if (name === 'dashboard') renderDashboard();
+  else if (name === 'all') renderList('allDocs', vault, 'emptyAll');
+  else if (name === 'expiring') renderList('expiringDocs', getExpiring(), 'emptyExpiring');
+  else if (name === 'locked') renderList('lockedDocs', vault.filter(d => d.password), 'emptyLocked');
+}
+
+// ─── DASHBOARD ─────────────────────────────────────────
+function renderDashboard() {
+  const expiring = getExpiring();
+  document.getElementById('stat-total').textContent = vault.length;
+  document.getElementById('stat-locked').textContent = vault.filter(d => d.password).length;
+  document.getElementById('stat-expiring').textContent = expiring.length;
+
+  const cats = ['identity','financial','medical','education','property','travel','other'];
+  cats.forEach(c => {
+    const count = vault.filter(d => d.category === c).length;
+    const el = document.getElementById('cat-' + c);
+    if (el) el.textContent = count + ' document' + (count !== 1 ? 's' : '');
+    const cnt = document.getElementById('cnt-' + c);
+    if (cnt) cnt.textContent = count;
+  });
+
+  document.getElementById('totalCount').textContent = vault.length;
+  document.getElementById('allCount').textContent = vault.length;
+  document.getElementById('expiringCount').textContent = expiring.length;
+  document.getElementById('lockedCount').textContent = vault.filter(d => d.password).length;
+
+  if (expiring.length > 0) {
+    document.getElementById('expiryBanner').style.display = 'flex';
+    document.getElementById('expiryBannerText').textContent = expiring.length;
+  } else {
+    document.getElementById('expiryBanner').style.display = 'none';
+  }
+
+  const recent = [...vault].sort((a,b) => b.addedAt - a.addedAt).slice(0, 5);
+  renderList('recentDocs', recent, 'emptyDashboard');
+}
+
+function getExpiring() {
+  const now = Date.now();
+  const ninety = 90 * 24 * 60 * 60 * 1000;
+  return vault.filter(d => d.expiry && (new Date(d.expiry) - now) < ninety && new Date(d.expiry) > now);
+}
+
+// ─── RENDER LIST ───────────────────────────────────────
+function renderList(containerId, docs, emptyId) {
+  const container = document.getElementById(containerId);
+  const empty = document.getElementById(emptyId);
+
+  if (!docs.length) {
+    container.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  container.innerHTML = docs.map(doc => {
+    const ext = doc.fileName ? doc.fileName.split('.').pop().toLowerCase() : 'file';
+    const ftClass = ext === 'pdf' ? 'ft-pdf' : ['jpg','jpeg','png'].includes(ext) ? 'ft-img' : ['doc','docx'].includes(ext) ? 'ft-doc' : 'ft-other';
+    const ftIcon = ext === 'pdf' ? '📄' : ['jpg','jpeg','png'].includes(ext) ? '🖼️' : ['doc','docx'].includes(ext) ? '📝' : '📎';
+    const expiryStr = doc.expiry ? (() => {
+      const days = Math.ceil((new Date(doc.expiry) - Date.now()) / 86400000);
+      return days < 0 ? `<span class="badge badge-exp">Expired</span>` :
+             days < 90 ? `<span class="badge badge-exp">Exp: ${days}d</span>` :
+             `<span class="badge badge-ok">Valid</span>`;
+    })() : '';
+
+    const catEmoji = {identity:'🪪',financial:'💳',medical:'🏥',education:'🎓',property:'🏠',travel:'✈️',other:'📋'}[doc.category] || '📋';
+
+    return `
+      <div class="doc-item" onclick="openDoc(${doc.id})">
+        <div class="doc-icon ${ftClass}">${ftIcon}</div>
+        <div class="doc-info">
+          <div class="doc-name">${doc.name}</div>
+          <div class="doc-meta">${catEmoji} ${doc.category} · Added ${new Date(doc.addedAt).toLocaleDateString()} ${doc.fileName ? '· ' + doc.fileName : ''}</div>
+        </div>
+        <div class="doc-badges">
+          ${doc.password ? '<span class="badge badge-locked">🔒 Locked</span>' : ''}
+          ${expiryStr}
+        </div>
+        <div class="doc-actions" onclick="event.stopPropagation()">
+          <button class="icon-btn" onclick="openDoc(${doc.id})" title="View">👁</button>
+          <button class="icon-btn danger" onclick="deleteDoc(${doc.id})" title="Delete">🗑</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── CATEGORY FILTER ───────────────────────────────────
+function filterByCategory(cat, el) {
+  currentCategory = cat;
+  const emojis = {identity:'🪪',financial:'💳',medical:'🏥',education:'🎓',property:'🏠',travel:'✈️',other:'📋'};
+  document.getElementById('categoryPageTitle').textContent = (emojis[cat] || '📋') + ' ' + cat.charAt(0).toUpperCase() + cat.slice(1);
+  showPage('category', el);
+  renderList('categoryDocs', vault.filter(d => d.category === cat), 'emptyCategory');
+}
+
+// ─── UPLOAD ────────────────────────────────────────────
+function openUploadModal() {
+  selectedFile = null;
+  document.getElementById('docName').value = '';
+  document.getElementById('docCategory').value = 'identity';
+  document.getElementById('docExpiry').value = '';
+  document.getElementById('docIssue').value = '';
+  document.getElementById('docNotes').value = '';
+  document.getElementById('docPassword').value = '';
+  document.getElementById('dropTitle').textContent = 'Drop your file here';
+  document.getElementById('dropSub').textContent = 'or click to browse · PDF, JPG, PNG, DOCX supported';
+  document.getElementById('dropIcon').textContent = '📂';
+  document.getElementById('uploadModal').classList.add('open');
+}
+
+function dragOver(e) { e.preventDefault(); document.getElementById('dropZone').classList.add('drag-over'); }
+function dragLeave() { document.getElementById('dropZone').classList.remove('drag-over'); }
+function dropFile(e) {
+  e.preventDefault();
+  dragLeave();
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function fileSelected(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  selectedFile = file;
+  document.getElementById('dropIcon').textContent = '✅';
+  document.getElementById('dropTitle').textContent = file.name;
+  document.getElementById('dropSub').textContent = (file.size / 1024).toFixed(1) + ' KB · Click to change';
+  if (!document.getElementById('docName').value) {
+    document.getElementById('docName').value = file.name.replace(/\.[^.]+$/, '');
+  }
+}
+
+function saveDocument() {
+  const name = document.getElementById('docName').value.trim();
+  if (!name) { showToast('❌ Please enter a document name', 'error'); return; }
+
+  const doc = {
+    id: Date.now(),
+    name,
+    category: document.getElementById('docCategory').value,
+    expiry: document.getElementById('docExpiry').value,
+    issue: document.getElementById('docIssue').value,
+    notes: document.getElementById('docNotes').value,
+    password: document.getElementById('docPassword').value,
+    fileName: selectedFile ? selectedFile.name : null,
+    fileSize: selectedFile ? selectedFile.size : 0,
+    addedAt: Date.now(),
+  };
+
+  // Store file as base64 if present (and small enough)
+  if (selectedFile && selectedFile.size < 2 * 1024 * 1024) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      doc.fileData = e.target.result;
+      vault.push(doc);
+      persist();
+      refreshAll();
+      closeModal('uploadModal');
+      showToast('✅ Document saved to vault!', 'success');
+    };
+    reader.readAsDataURL(selectedFile);
+  } else {
+    vault.push(doc);
+    persist();
+    refreshAll();
+    closeModal('uploadModal');
+    showToast('✅ Document saved to vault!', 'success');
+  }
+}
+
+// ─── VIEW / OPEN ───────────────────────────────────────
+function openDoc(id) {
+  const doc = vault.find(d => d.id === id);
+  if (!doc) return;
+  if (doc.password) {
+    pendingDocId = id;
+    document.getElementById('docPassInput').value = '';
+    document.getElementById('passModal').classList.add('open');
+  } else {
+    showDocView(doc);
+  }
+}
+
+function checkDocPass() {
+  const doc = vault.find(d => d.id === pendingDocId);
+  if (!doc) return;
+  if (document.getElementById('docPassInput').value === doc.password) {
+    closeModal('passModal');
+    showDocView(doc);
+  } else {
+    showToast('❌ Wrong password', 'error');
+    document.getElementById('docPassInput').value = '';
+  }
+}
+
+function showDocView(doc) {
+  document.getElementById('viewModalTitle').textContent = '📄 ' + doc.name;
+
+  const catEmoji = {identity:'🪪',financial:'💳',medical:'🏥',education:'🎓',property:'🏠',travel:'✈️',other:'📋'}[doc.category] || '📋';
+  const rows = [
+    ['Category', catEmoji + ' ' + doc.category],
+    ['Added', new Date(doc.addedAt).toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'})],
+    doc.issue ? ['Issue Date', doc.issue] : null,
+    doc.expiry ? ['Expiry Date', doc.expiry] : null,
+    doc.notes ? ['Notes', doc.notes] : null,
+    doc.fileName ? ['File', doc.fileName + (doc.fileSize ? ' (' + (doc.fileSize/1024).toFixed(1) + ' KB)' : '')] : null,
+  ].filter(Boolean);
+
+  let content = `<div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1rem">`;
+  rows.forEach(([k,v]) => {
+    content += `<div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--text-muted);font-size:0.82rem;text-transform:uppercase;letter-spacing:0.06em">${k}</span>
+      <span style="font-size:0.9rem;text-align:right">${v}</span>
+    </div>`;
+  });
+  content += `</div>`;
+
+  // Preview image if available
+  if (doc.fileData && doc.fileName && /\.(jpg|jpeg|png)$/i.test(doc.fileName)) {
+    content += `<img src="${doc.fileData}" style="width:100%;border-radius:10px;margin-bottom:1rem;max-height:300px;object-fit:contain;background:var(--surface2)" alt="preview">`;
+  }
+
+  if (doc.fileData) {
+    content += `<a href="${doc.fileData}" download="${doc.fileName}" class="btn btn-gold" style="text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem">⬇️ Download File</a>`;
+  }
+
+  document.getElementById('viewModalContent').innerHTML = content;
+  document.getElementById('viewModal').classList.add('open');
+}
+
+// ─── DELETE ────────────────────────────────────────────
+function deleteDoc(id) {
+  if (!confirm('Delete this document? This cannot be undone.')) return;
+  vault = vault.filter(d => d.id !== id);
+  persist();
+  refreshAll();
+  showToast('🗑️ Document deleted', 'error');
+}
+
+// ─── SEARCH ────────────────────────────────────────────
+function searchDocs() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  if (!q) { refreshAll(); return; }
+  const results = vault.filter(d => d.name.toLowerCase().includes(q) || d.category.includes(q) || (d.notes || '').toLowerCase().includes(q));
+  showPage('all');
+  renderList('allDocs', results, 'emptyAll');
+}
+
+// ─── SETTINGS ──────────────────────────────────────────
+function changePin() {
+  const cur = document.getElementById('currentPin').value;
+  const nw = document.getElementById('newPin').value;
+  const cf = document.getElementById('confirmPin').value;
+  if (cur !== vaultPin) { showToast('❌ Current PIN is wrong', 'error'); return; }
+  if (nw.length < 4) { showToast('❌ PIN must be at least 4 digits', 'error'); return; }
+  if (nw !== cf) { showToast('❌ New PINs do not match', 'error'); return; }
+  vaultPin = nw;
+  localStorage.setItem('docvault_pin', vaultPin);
+  document.getElementById('currentPin').value = '';
+  document.getElementById('newPin').value = '';
+  document.getElementById('confirmPin').value = '';
+  showToast('✅ PIN updated successfully!', 'success');
+}
+
+function clearAll() {
+  if (!confirm('Delete ALL documents? This cannot be undone.')) return;
+  vault = [];
+  persist();
+  refreshAll();
+  showToast('🗑️ All documents deleted', 'error');
+}
+
+// ─── UTILS ─────────────────────────────────────────────
+function persist() {
+  localStorage.setItem('docvault_docs', JSON.stringify(vault));
+  updateStorage();
+}
+
+function updateStorage() {
+  const size = new Blob([JSON.stringify(vault)]).size;
+  const kb = (size / 1024).toFixed(1);
+  const pct = Math.min((size / (5*1024*1024)) * 100, 100);
+  document.getElementById('storageText').textContent = kb + ' KB / 5 MB';
+  document.getElementById('storageFill').style.width = pct + '%';
+}
+
+function refreshAll() {
+  renderDashboard();
+  updateStorage();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+function toggleDocPass() {
+  const inp = document.getElementById('docPassword');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function togglePass(id) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// INIT
+updateStorage();
+</script>
+</body>
+</html>
